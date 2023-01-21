@@ -1,7 +1,7 @@
 const express = require("express");
 const axios = require("axios");
 const cheerio = require("cheerio");
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 const app = express();
 
@@ -48,6 +48,38 @@ newspapers.forEach((newspaper) => {
 
 app.get("/news", (req, res) => {
   res.json(articles);
+});
+
+app.get("/news/:newspaperId", (req, res) => {
+  const newspaperId = req.params.newspaperId;
+
+  const newspaperAddress = newspapers.filter(
+    (newspaper) => newspaper.name == newspaperId
+  )[0].address;
+
+  const newspaperBase = newspapers.filter(
+    (newspaper) => newspaper.name == newspaperId
+  )[0].base;
+
+  axios
+    .get(newspaperAddress)
+    .then((response) => {
+      const html = response.data;
+      const $ = cheerio.load(html);
+      const specificArticles = [];
+
+      $('a:contains("climate")', html).each(function () {
+        const title = $(this).text();
+        const url = $(this).attr("href");
+        specificArticles.push({
+          title,
+          url: newspaperBase + url,
+          source: newspaperId,
+        });
+      });
+      res.json(specificArticles);
+    })
+    .catch((err) => console.log(err));
 });
 
 // app.get("/news", (req, res) => {
